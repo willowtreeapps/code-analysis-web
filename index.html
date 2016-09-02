@@ -1,0 +1,299 @@
+<!-- Welcome!
+     ========
+
+     This is a list view for employees that work at WillowTree.
+
+
+     What it does:
+     ~~~~~~~~~~~~~
+
+     - Lists employees photos & names.
+     - Search for an employee by name.
+     - Sort employees by their first names.
+     - Sort empolyees by their last names.
+     - Shuffle the list order (because why not).
+
+     Implementation details:
+     ~~~~~~~~~~~~~~~~~~~~~~~
+
+     - No compile step—Just open this file in a browser.
+     - The view layer is written in React (without JSX).
+       * If you don't know React, don't fret! The logic lives
+         outside of it for the most part.
+
+
+     So... what now?
+     ~~~~~~~~~~~~~~~
+
+     Take a look at the code. It works on the surface, but can it be
+     improved? Are there things that you would do differently?
+
+     Change it & Have fun!
+
+
+     Misc. Notes
+     ~~~~~~~~~~~
+
+     This code is only expected to work in the latest version of
+     Google Chrome. Feel free to use all the latest & greatest
+     things that are offered (new API's for JS, CSS, etc.).
+
+     Currently this project does _not_ have a build step (i.e. it runs
+     directly by opening the file in Google Chrome). If you finish
+     with improvements & feel like there isn't much else to do _then_
+     add in a build step if you wish. This is NOT strictly required.
+
+   -->
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <head>
+        <title>Single Page Application</title>
+
+        <style>
+        body {
+            margin: 0px;
+            padding: 0px;
+        }
+
+        .app-container {
+            width: 400px;
+            margin: 0 auto 0 auto;
+        }
+
+        .image {
+            width: 100px;
+            height: 100px;
+        }
+
+        .list-container {
+            width: 100%;
+            border: 1px solid black;
+        }
+        </style>
+    </head>
+    <body>
+        <!-- Container for our application -->
+        <div id="app"></div>
+
+
+        <!-- 3rd Party Scripts -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.7/react.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.7/react-dom.js"></script>
+
+
+        <!-- Our Application Logic -->
+        <script>
+
+        /*==================================================
+
+           API
+
+         ***************************************************/
+
+        /**
+         * Get the data from the namegame endpoint.
+         *
+         * The data comes back in the format:
+         *
+         *    [
+         *        { name: 'Viju Legard', url: '...' },
+         *        { name: 'Matt Seibert', url: '...' },
+         *        ...
+         *    ]
+         */
+        function getPersonList() {
+            return new Promise((resolve, reject) => {
+                fetch('http://api.namegame.willowtreemobile.com/').then(function(response) {
+                    if (response.status !== 200) {
+                        reject(new Error("Error!"));
+                    }
+
+                    response.json().then((imageList) => {
+                        resolve(imageList);
+                    });
+                });
+            });
+        }
+
+
+        /*==================================================
+
+           DATA TRANSFORMS
+
+         ***************************************************/
+
+
+        function getLastName(fullName) {
+            return fullName.match(/\w+/g)[1];
+        }
+
+        const getFirstName = (fullName) => {
+            return fullName.match(/\w+/g)[0];
+        };
+
+        /**
+         * Fisher-Yates shuffle
+         */
+        function shuffleList(list) {
+            // Make a copy & don't mutate the passed in list
+            let result = list.slice(1);
+
+            let tmp, j, i = list.length - 1
+
+            for (; i > 0; i -= 1) {
+                j = Math.floor(Math.random() * (i + 1));
+                tmp = list[i];
+                list[i] = list[j];
+                list[j] = tmp;
+            }
+
+            return result;
+        }
+
+
+        /**
+         * Remove any people that do not have the name we are
+         * searching for.
+         */
+        function filterByName(searchForName, personList) {
+            return personList.filter((person) => {
+                return person.name === searchForName;
+            });
+        }
+
+
+        /**
+         * Takes in a property of an object list, e.g. "name" below
+         *
+         *    people = [{ name: 'Sam' }, { name: 'Jon' }, { name: 'Kevin' }]
+         *
+         * And returns a function that will sort that list, e.g.
+         *
+         *    const sortPeopleByName = sortObjListByProp('name');
+         *    const sortedPeople = sortPeopleByName(people);
+         *
+         *  We now have:
+         *
+         *    console.log(sortedPeople)
+         *    > [{ name: 'Jon' }, { name: 'Kevin' }, { name: 'Sam' }]
+         *
+         */
+        function sortObjListByProp(prop) {
+            return function(objList) {
+                // Make a copy & don't mutate the passed in list
+                let result = objList.slice(1);
+
+                result.sort((a, b) => {
+                    if (a[prop] < b[prop]) {
+                        return -1;
+                    }
+
+                    if (a[prop] > b[prop]) {
+                        return 1;
+                    }
+
+                    return 1;
+                });
+
+                return result;
+            };
+        }
+
+        const sortByFirstName = sortObjListByProp('name');
+
+        const sortByLastName = (personList) => sortByFirstName(personList).reverse();
+
+
+        /*==================================================
+
+           VIEW (React)
+
+         ***************************************************/
+
+        const Search = (props) => React.DOM.input({
+            type: 'input',
+            onChange: props.onChange
+        });
+
+        const Thumbnail = (props) => React.DOM.img({
+            className: 'image',
+            src: props.src
+        });
+
+        const ListRow = (props) => React.DOM.tr({ key: props.person.name }, [
+            React.DOM.td({ key: 'thumb' }, React.createElement(Thumbnail, { src: props.person.url })),
+            React.DOM.td({ key: 'first' }, null, getFirstName(props.person.name)),
+            React.DOM.td({ key: 'last' }, null, getLastName(props.person.name)),
+        ]);
+
+        const ListContainer = (props) => React.DOM.table({ className: 'list-container' }, [
+            React.DOM.thead({ key: 'thead' }, React.DOM.tr({}, [
+                React.DOM.th({ key: 'thumb-h' }, null, 'Thumbnail'),
+                React.DOM.th({ key: 'first-h' }, null, 'First Name'),
+                React.DOM.th({ key: 'last-h' }, null, 'Last Name')
+            ])),
+            React.DOM.tbody({ key: 'tbody' }, props.personList.map((person, i) =>
+                React.createElement(ListRow, { key: `person-${i}`, person })))
+        ]);
+
+        const App = React.createClass({
+            getInitialState() {
+                return {
+                    personList: [],
+                    visiblePersonList: []
+                };
+            },
+
+            componentDidMount() {
+                getPersonList().then((personList) =>
+                    this.setState({
+                        personList,
+                        visiblePersonList: personList
+                    }));
+            },
+
+            _shuffleList() {
+                this.setState({
+                    visiblePersonList: shuffleList(this.state.personList)
+                });
+            },
+
+            _sortByFirst() {
+                this.setState({
+                    visiblePersonList: sortByFirstName(this.state.personList)
+                });
+            },
+
+            _sortByLast() {
+                this.setState({
+                    visiblePersonList: sortByLastName(this.state.personList)
+                });
+            },
+
+            _onSearch(e) {
+                this.setState({
+                    visiblePersonList: filterByName(e.target.value, this.state.personList)
+                });
+            },
+
+            render() {
+                const { visiblePersonList } = this.state;
+
+                return React.DOM.div({ className: 'app-container' }, [
+                    React.createElement(Search, { key: 'search', onChange: this._onSearch }),
+                    React.DOM.button({ key: 'shuffle', onClick: this._shuffleList }, null, 'Shuffle'),
+                    React.DOM.button({ key: 'sort-first', onClick: this._sortByFirst }, null, 'Sort (First Name)'),
+                    React.DOM.button({ key: 'sort-last', onClick: this._sortByLast }, null, 'Sort (Last Name)'),
+                    React.createElement(ListContainer, { key: 'list', personList: visiblePersonList })
+                ]);
+            }
+        });
+
+        ReactDOM.render(
+            React.createElement(App),
+            document.getElementById('app')
+        );
+
+        </script>
+    </body>
+</html>
