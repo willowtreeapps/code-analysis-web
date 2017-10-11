@@ -96,19 +96,20 @@
          * The data comes back in the format:
          *
          *    [
-         *        { name: 'Viju Legard', url: '...' },
-         *        { name: 'Matt Seibert', url: '...' },
+         *        { firstName: 'Viju,  lastName: 'Legard',  headshot: { url: '...' } },
+         *        { firstName: 'Matt', lastName: 'Seibert', headshot: { url: '...' } },
          *        ...
          *    ]
          */
         function getPersonList() {
             return new Promise((resolve, reject) => {
-                fetch('http://api.namegame.willowtreemobile.com/').then(function(response) {
+                fetch('https://willowtreeapps.com/api/v1.0/profiles')
+                .then(response => {
                     if (response.status !== 200) {
                         reject(new Error("Error!"));
                     }
 
-                    response.json().then((imageList) => {
+                    response.json().then(imageList => {
                         resolve(imageList);
                     });
                 });
@@ -123,12 +124,18 @@
          ***************************************************/
 
 
-        function getLastName(fullName) {
-            return fullName.match(/\w+/g)[1];
+        function getLastName(person) {
+            return person.lastName;
         }
 
-        const getFirstName = (fullName) => {
-            return fullName.match(/\w+/g)[0];
+        const getFirstName = (person) => {
+            return person.firstName;
+        };
+
+        // headshot URLs are scheme relative //
+        // prepend http: to prevent invalid schemes like file:// or uri://
+        const getImageUrl = (person) => {
+            return `http:${person.headshot.url}`;
         };
 
         /**
@@ -157,7 +164,7 @@
          */
         function filterByName(searchForName, personList) {
             return personList.filter((person) => {
-                return person.name === searchForName;
+                return person.firstName === searchForName || person.lastName === searchForName;
             });
         }
 
@@ -199,7 +206,7 @@
             };
         }
 
-        const sortByFirstName = sortObjListByProp('name');
+        const sortByFirstName = sortObjListByProp('firstName');
 
         const sortByLastName = (personList) => sortByFirstName(personList).reverse();
 
@@ -220,10 +227,10 @@
             src: props.src
         });
 
-        const ListRow = (props) => React.DOM.tr({ key: props.person.name }, [
-            React.DOM.td({ key: 'thumb' }, React.createElement(Thumbnail, { src: props.person.url })),
-            React.DOM.td({ key: 'first' }, null, getFirstName(props.person.name)),
-            React.DOM.td({ key: 'last' }, null, getLastName(props.person.name)),
+        const ListRow = (props) => React.DOM.tr({ key: `${props.person.firstName} ${props.person.lastName}` }, [
+            React.DOM.td({ key: 'thumb' }, React.createElement(Thumbnail, { src: getImageUrl(props.person) })),
+            React.DOM.td({ key: 'first' }, null, getFirstName(props.person)),
+            React.DOM.td({ key: 'last' }, null, getLastName(props.person)),
         ]);
 
         const ListContainer = (props) => React.DOM.table({ className: 'list-container' }, [
